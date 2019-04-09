@@ -87,6 +87,7 @@ df_miss = spark.createDataFrame([
 
 df_miss.rdd.map(lambda row: (row["id"], sum([c == None for c in row]))).collect()
 
+# agg后面的*号表示将DataFrame按列处理，也就是在拿出列名c之后，直接可以计算c列的均值、最大值等等信息。
 df_miss.agg(*[
     (1 - (fn.count(c) / fn.count("*"))).alias(c + "_missing")
     for c in df_miss.columns
@@ -101,5 +102,29 @@ means = df_miss_no_income.agg(*[
 ]).toPandas().to_dict("records")[0]
 df_miss_no_income.fillna(means).show()
 
+## 异常值处理(四分位法)
+df_outliers = spark.createDataFrame([
+    (1, 143.5, 5.3, 28),
+    (2, 154.2, 5.5, 45),
+    (3, 342.3, 5.1, 99),
+    (4, 144.5, 5.5, 33),
+    (5, 133.2, 5.4, 54),
+    (6, 124.1, 5.1, 21),
+    (7, 129.2, 5.3, 42)
+], ["id", "weight", "height", "age"])
+
+cols = ["weight", "height", "age"]
+bounds = {}
+
+for col in cols:
+    quantiles = df_outliers.approxQuantile(col, [0.25, 0.75], 0.05)
+    IQR = quantiles[1] - quantiles[0]
+    bounds[col] = [quantiles[0] - 1.5*IQR, quantiles[1] + 1.5*IQR]
+
+outliers = df_outliers.select(*["id"] + [
+    ((df_outliers[c] < bounds[c][0]) | (df_outliers[c] > bounds[c][1])).alias(c + "_o")
+    for c in cols]
+)
+outliers.show()
 
 
