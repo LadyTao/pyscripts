@@ -13,6 +13,7 @@ spark = SparkSession.\
 # 初始化SparkContext
 sc = SparkContext.getOrCreate()
 
+## SparkDataFrame基本操作
 flightPrefFilePath = "C:\\Users\\WS\\Desktop\\departuredelays.csv"
 airPortsFilePath = "C:\\Users\\WS\\Desktop\\airport-codes-na.txt"
 
@@ -43,6 +44,7 @@ spark.sql("""
     group by a.state
 """).show()
 
+## 处理重复数据
 df = spark.createDataFrame([
     (1, 144.5, 5.9, 33, 'M'),
     (2, 167.2, 5.4, 45, 'M'),
@@ -72,6 +74,7 @@ df.agg(
 
 df.withColumn("new_id", fn.monotonically_increasing_id()).show()
 
+## 处理缺失值
 df_miss = spark.createDataFrame([
     (1, 143.5, 5.6, 28, 'M', 100000),
     (2, 167.2, 5.4, 45, 'M', None),
@@ -97,9 +100,6 @@ means = df_miss_no_income.agg(*[
     for c in df_miss_no_income.columns if c != "gender"
 ]).toPandas().to_dict("records")[0]
 df_miss_no_income.fillna(means).show()
-
-
-
 
 
 
